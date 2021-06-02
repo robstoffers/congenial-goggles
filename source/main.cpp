@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <math.h>
 
+#include "stone_wall.h"
+
 int mapWidth = 16;
 int mapHeight = 16;
 u8 map[] = {
@@ -23,13 +25,31 @@ u8 map[] = {
 	1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 };
+// u8 map[] = {
+// 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// };
 
 int screenWidth = 256;
 int screenHeight = 192;
 
-float playerX = 1.5f;
-float playerY = 1.5f;
-float playerA = 0.0f;
+float playerX = 4.5f;
+float playerY = 2.5f;
+float playerA = 0;
 float fov = 3.14159f / 4.0f;
 float drawDistance = 16.0f;
 float walkSpeed = 1.5f;
@@ -79,11 +99,11 @@ int main(void) {
 		float dt = (float)deltaTick / (float)BUS_CLOCK;
 		cpuStartTiming(0);
 
-		float playerDirX = sinf(playerA);
-		float playerDirY = cosf(playerA);
+		float playerDirX = cosf(playerA);
+		float playerDirY = sinf(playerA);
 
-		float playerRightX = sinf(playerA + 1.5708);
-		float playerRightY = cosf(playerA + 1.5708);
+		float playerRightX = cosf(playerA + 1.5708);
+		float playerRightY = sinf(playerA + 1.5708);
 
 		scanKeys();
 		if (keysDown() & KEY_START) {
@@ -109,6 +129,10 @@ int main(void) {
 		console->cursorY = 1;
 		printf("player: (%.2f, %.2f)", playerX, playerY);
 
+		console->cursorX = 0;
+		console->cursorY = 2;
+		printf("dir: (%.2f, %.2f)", playerDirX, playerDirY);
+
 		float angleSweepStart = playerA - fov / 2.0f;
 
 		for (int x = 0; x < screenWidth; x++) {
@@ -117,8 +141,8 @@ int main(void) {
 			float distanceToWall = 0.0f;
 			bool hitWall = false;
 
-			float rayDirX = sinf(rayAngle);
-			float rayDirY = cosf(rayAngle);
+			float rayDirX = cosf(rayAngle);
+			float rayDirY = sinf(rayAngle);
 
 			float sideDistX;
 			float sideDistY;
@@ -131,6 +155,8 @@ int main(void) {
 
 			int mapX = (int)playerX;
 			int mapY = (int)playerY;
+
+			float sampleX = 0.0f;
 
 			if (rayDirX < 0) {
         		stepX = -1;
@@ -165,26 +191,46 @@ int main(void) {
 				} else {
 					if (map[mapY * mapWidth + mapX] == 1) {
 						hitWall = true;
+
+						float tileMidX = (float)mapX + 0.5f;
+						float tileMidY = (float)mapY + 0.5f;
+
+						float testPointX = playerX + rayDirX * distanceToWall;
+						float testPointY = playerY + rayDirY * distanceToWall;
+
+						float testAngle = atan2f((testPointY - tileMidY), (testPointX - tileMidX));
+						if (testAngle >= -3.14159f * 0.25f && testAngle < 3.14159f * 0.25f)
+							sampleX = testPointY - (float)mapY;
+						if (testAngle >= 3.14159f * 0.25f && testAngle < 3.14159f * 0.75f)
+							sampleX = testPointX - (float)mapX;
+						if (testAngle < -3.14159f * 0.25f && testAngle >= -3.14159f * 0.75f)
+							sampleX = testPointX - (float)mapX;
+						if (testAngle >= 3.14159f * 0.75f || testAngle < -3.14159f * 0.75f)
+							sampleX = testPointY - (float)mapY;
 					}
 				}
 			}
 
-			int ceiling = (float)(screenHeight / 2.0f) - screenHeight / ((float)distanceToWall);
+			int ceiling = (float)(screenHeight / 2.0f) - screenHeight / distanceToWall;
 			int floor = screenHeight - ceiling;
 
-			float f = (distanceToWall / drawDistance);
-			float a = 31;
-			float b = 5;
-			int lerp = int((a * (1.0 - f)) + (b * f));
+			// float f = (distanceToWall / drawDistance);
+			// float a = 31;
+			// float b = 5;
+			// int lerp = int((a * (1.0 - f)) + (b * f));
 
-			u16 shade = ARGB16(1, lerp, lerp, lerp);
+			// u16 shade = ARGB16(1, lerp, lerp, lerp);
 			for (int y = 0; y < screenHeight; y++) {
 				if (y <= ceiling) {
 					backBuffer[y * screenWidth + x] = ARGB16(1, 0, 0, 0);
 				} else if (y > ceiling && y <= floor) {
-					backBuffer[y * screenWidth + x] = shade;
+					float sampleY = ((float)y - (float)ceiling) / ((float)floor - (float)ceiling);
+					int sx = sampleX * 32.0f;
+					int sy = sampleY * 31.0f;
+					backBuffer[y * screenWidth + x] = stone_wall[sy * 32 + sx];
+					//backBuffer[y * screenWidth + x] = shade;
 				} else {
-					backBuffer[y * screenWidth + x] = ARGB16(1, 0, 31, 0);
+					backBuffer[y * screenWidth + x] = ARGB16(1, 0, 0, 0);
 				}
 			}
 		}
