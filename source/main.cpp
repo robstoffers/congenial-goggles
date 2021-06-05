@@ -47,8 +47,8 @@ u8 map[] = {
 int screenWidth = 256;
 int screenHeight = 192;
 
-float playerX = 4.5f;
-float playerY = 2.5f;
+float playerX = 1.5f;
+float playerY = 1.5f;
 float playerA = 0;
 float fov = 3.14159f / 4.0f;
 float drawDistance = 16.0f;
@@ -84,13 +84,18 @@ void move(u8 *map, int mapWidth, float *pX, float *pY, float velX, float velY) {
 
 int main(void) {
 	videoSetMode(MODE_5_2D);
+	
 	consoleDemoInit();
 
-	int bg = bgInit(3, BgType_Bmp16, BgSize_B16_256x256, 0,0);
+	int bg = bgInit(3, BgType_Bmp16, BgSize_B16_256x256, 0, 0);
 
 	PrintConsole* console = consoleDemoInit();
 
 	u16* backBuffer = (u16*)bgGetGfxPtr(bg);
+	//u16* backBuffer = (u16*)bgGetGfxPtr(bg) + 256*256;
+
+	int bufferSize = screenWidth * screenHeight;
+	u16* buffer = new u16[bufferSize];
 
 	cpuStartTiming(0);
 
@@ -131,8 +136,8 @@ int main(void) {
 
 		console->cursorX = 0;
 		console->cursorY = 2;
-		printf("dir: (%.2f, %.2f)", playerDirX, playerDirY);
-
+		//printf("dir: (%.2f, %.2f)", playerDirX, playerDirY);
+		printf("dt: %.5f", dt);
 		float angleSweepStart = playerA - fov / 2.0f;
 
 		for (int x = 0; x < screenWidth; x++) {
@@ -218,24 +223,34 @@ int main(void) {
 			// float a = 31;
 			// float b = 5;
 			// int lerp = int((a * (1.0 - f)) + (b * f));
-
 			// u16 shade = ARGB16(1, lerp, lerp, lerp);
+			
 			for (int y = 0; y < screenHeight; y++) {
 				if (y <= ceiling) {
-					backBuffer[y * screenWidth + x] = ARGB16(1, 0, 0, 0);
+					buffer[y * screenWidth + x] = ARGB16(1, 0, 0, 0);
 				} else if (y > ceiling && y <= floor) {
-					float sampleY = ((float)y - (float)ceiling) / ((float)floor - (float)ceiling);
-					int sx = sampleX * 32.0f;
-					int sy = sampleY * 31.0f;
-					backBuffer[y * screenWidth + x] = stone_wall[sy * 32 + sx];
+					if (distanceToWall < drawDistance) {
+						float sampleY = ((float)y - (float)ceiling) / ((float)floor - (float)ceiling);
+						int sx = sampleX * 32.0f;
+						int sy = sampleY * 32.0f;
+						buffer[y * screenWidth + x] = stone_wall[sy * 32 + sx];
+					} else {
+						buffer[y * screenWidth + x] = ARGB16(1, 0, 0, 0);
+					}
 					//backBuffer[y * screenWidth + x] = shade;
 				} else {
-					backBuffer[y * screenWidth + x] = ARGB16(1, 0, 0, 0);
+					buffer[y * screenWidth + x] = ARGB16(1, 0, 31, 0);
 				}
 			}
 		}
 
-		swiWaitForVBlank();
+		// for (int y = 0; y < screenHeight; y++) {
+		// 	for (int x = 0; x < screenWidth; x++) {
+		// 		buffer[y * screenWidth + x] = ARGB16(1, rand() % 32, rand() % 32, rand() % 32);
+		// 	}
+		// }
+
+		dmaCopy(buffer, backBuffer, sizeof(u16) * bufferSize);
 	}
 	return 0;
 }
