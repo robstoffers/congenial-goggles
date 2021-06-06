@@ -5,6 +5,20 @@
 
 #include "stone_wall.h"
 
+#define SCREEN_BUFFER_LEN SCREEN_WIDTH * SCREEN_HEIGHT
+#define SCREEN_BUFFER_SIZE SCREEN_BUFFER_LEN * 2
+
+#define GAME_WIDTH SCREEN_WIDTH / 2
+#define GAME_HEIGHT SCREEN_HEIGHT / 2
+
+#define BLACK 	0x8000
+#define WHITE 	0xFFFF
+#define RED 	0xFC00
+#define GREEN	0x83E0
+#define BLUE	0x801F
+
+#define PI 3.14159f
+
 int mapWidth = 16;
 int mapHeight = 16;
 u8 map[] = {
@@ -44,59 +58,34 @@ u8 map[] = {
 // 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 // };
 
-int screenWidth = 256;
-int screenHeight = 192;
+u16 screenBuffer[SCREEN_BUFFER_LEN];
 
 float playerX = 1.5f;
 float playerY = 1.5f;
 float playerA = 0;
-float fov = 3.14159f / 4.0f;
+float fov = PI / 4.0f;
 float drawDistance = 16.0f;
 float walkSpeed = 1.5f;
 float turnSpeed = 2.25f;
 
-void move(u8 *map, int mapWidth, float *pX, float *pY, float velX, float velY) {
-	float playerX = *pX;
-	float playerY = *pY;
+void move(u8 *map, int mapWidth, float *pX, float *pY, float velX, float velY);
 
-	// store the position where the player will go but don't move it yet.
-	float testX = playerX + velX;
-	float testY = playerY + velY;
-
-	// Only testing the X movement right now
-	int tileX = (int)testX;
-	int tileY = (int)playerY;
-	if (map[tileY * mapWidth + tileX] == 1) {
-		testX = playerX;
-	}
-
-	// Only testing the Y movement now
-	tileX = (int)playerX;
-	tileY = (int)testY;
-	if (map[tileY * mapWidth + tileX] == 1) {
-		testY = playerY;
-	}
-
-	// update the player position.
-	*pX = testX;
-	*pY = testY;
-}
+u16 colorLerp16(u16 from, u16 to, float amount);
 
 int main(void) {
 	videoSetMode(MODE_5_2D);
 	
 	consoleDemoInit();
 
-	int bg = bgInit(3, BgType_Bmp16, BgSize_B16_256x256, 0, 0);
+	int bg = bgInit(2, BgType_Bmp16, BgSize_B16_256x256, 0, 0);
+	bgSetScale(bg, 128, 128);
 
 	PrintConsole* console = consoleDemoInit();
 
-	u16* backBuffer = (u16*)bgGetGfxPtr(bg);
-	//u16* backBuffer = (u16*)bgGetGfxPtr(bg) + 256*256;
-
-	int bufferSize = screenWidth * screenHeight;
-	u16* buffer = new u16[bufferSize];
-
+	for(int x = 0; x < SCREEN_BUFFER_LEN; x++){
+		screenBuffer[x] = 0xEEEE;
+	}
+	
 	cpuStartTiming(0);
 
 	while (1) {
@@ -137,11 +126,13 @@ int main(void) {
 		console->cursorX = 0;
 		console->cursorY = 2;
 		//printf("dir: (%.2f, %.2f)", playerDirX, playerDirY);
+		//printf("dir: (%d, %d)", scaleX, scaleY);
 		printf("dt: %.5f", dt);
 		float angleSweepStart = playerA - fov / 2.0f;
 
-		for (int x = 0; x < screenWidth; x++) {
-			float rayAngle = angleSweepStart + ((float)x / (float)screenWidth) * fov;
+		float rayAngle;
+		for (int x = 0; x < GAME_WIDTH; x++) {
+			rayAngle = angleSweepStart + ((float)x / float(GAME_WIDTH)) * fov;
 
 			float distanceToWall = 0.0f;
 			bool hitWall = false;
@@ -216,41 +207,80 @@ int main(void) {
 				}
 			}
 
-			int ceiling = (float)(screenHeight / 2.0f) - screenHeight / distanceToWall;
-			int floor = screenHeight - ceiling;
+			int ceiling = (float)(GAME_HEIGHT / 2.0f) - GAME_HEIGHT / distanceToWall;
+			int floor = GAME_HEIGHT - ceiling;
 
-			// float f = (distanceToWall / drawDistance);
-			// float a = 31;
-			// float b = 5;
-			// int lerp = int((a * (1.0 - f)) + (b * f));
-			// u16 shade = ARGB16(1, lerp, lerp, lerp);
+			//float f = distanceToWall / drawDistance;
+			//u16 shade = colorLerp16(0xFFFF, 0x8000, f);
 			
-			for (int y = 0; y < screenHeight; y++) {
+			for (int y = 0; y < GAME_HEIGHT; y++) {
 				if (y <= ceiling) {
-					buffer[y * screenWidth + x] = ARGB16(1, 0, 0, 0);
+					screenBuffer[y * SCREEN_WIDTH + x] = BLACK;
 				} else if (y > ceiling && y <= floor) {
 					if (distanceToWall < drawDistance) {
 						float sampleY = ((float)y - (float)ceiling) / ((float)floor - (float)ceiling);
 						int sx = sampleX * 32.0f;
 						int sy = sampleY * 32.0f;
-						buffer[y * screenWidth + x] = stone_wall[sy * 32 + sx];
+
+						screenBuffer[y * SCREEN_WIDTH + x] = stone_wall[sy * 32 + sx];
 					} else {
-						buffer[y * screenWidth + x] = ARGB16(1, 0, 0, 0);
+						screenBuffer[y * SCREEN_WIDTH + x] = BLACK;
 					}
-					//backBuffer[y * screenWidth + x] = shade;
+					//screenBuffer[y * SCREEN_WIDTH + x] = shade;
 				} else {
-					buffer[y * screenWidth + x] = ARGB16(1, 0, 31, 0);
+					screenBuffer[y * SCREEN_WIDTH + x] = 0x9CE7;
 				}
 			}
 		}
 
-		// for (int y = 0; y < screenHeight; y++) {
-		// 	for (int x = 0; x < screenWidth; x++) {
-		// 		buffer[y * screenWidth + x] = ARGB16(1, rand() % 32, rand() % 32, rand() % 32);
-		// 	}
-		// }
+		dmaCopy(screenBuffer, BG_GFX, SCREEN_BUFFER_SIZE);
 
-		dmaCopy(buffer, backBuffer, sizeof(u16) * bufferSize);
+		swiWaitForVBlank();
 	}
 	return 0;
+}
+
+void move(u8 *map, int mapWidth, float *pX, float *pY, float velX, float velY) {
+	float playerX = *pX;
+	float playerY = *pY;
+
+	// store the position where the player will go but don't move it yet.
+	float testX = playerX + velX;
+	float testY = playerY + velY;
+
+	// Only testing the X movement right now
+	int tileX = (int)testX;
+	int tileY = (int)playerY;
+	if (map[tileY * mapWidth + tileX] == 1) {
+		testX = playerX;
+	}
+
+	// Only testing the Y movement now
+	tileX = (int)playerX;
+	tileY = (int)testY;
+	if (map[tileY * mapWidth + tileX] == 1) {
+		testY = playerY;
+	}
+
+	// update the player position.
+	*pX = testX;
+	*pY = testY;
+}
+
+u16 colorLerp16(u16 from, u16 to, float amount) {
+	u8 aTo = (to & 0x8000) >> 15;
+	u8 bTo = (to & 0x7C00) >> 10;
+	u8 gTo = (to & 0x3E0) >> 5;
+	u8 rTo = (to & 0x1F);
+
+	//u8 aFrom = (from & 0x8000) >> 15;
+	u8 bFrom = (from & 0x7C00) >> 10;
+	u8 gFrom = (from & 0x3E0) >> 5;
+	u8 rFrom = (from & 0x1F);
+
+	u8 rFinal = u8((rFrom * (1.0f - amount)) + (rTo * amount));
+	u8 gFinal = u8((gFrom * (1.0f - amount)) + (gTo * amount));
+	u8 bFinal = u8((bFrom * (1.0f - amount)) + (bTo * amount));
+
+	return (aTo << 15) | (bFinal << 10) | (gFinal << 5) | rFinal;
 }
