@@ -16,9 +16,9 @@ include $(DEVKITARM)/ds_rules
 #---------------------------------------------------------------------------------
 TARGET		:=	$(shell basename $(CURDIR))
 BUILD		:=	build
-SOURCES		:=	source source/game source/game/maps source/game/textures
+SOURCES		:=	source source/assets source/game source/game/maps
 DATA		:=	data  
-INCLUDES	:=	include source/game
+INCLUDES	:=	include source/assets source/game 
 
 #---------------------------------------------------------------------------------
 # options for code generation
