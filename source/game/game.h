@@ -6,6 +6,7 @@ class Input;
 class RaycastRenderer;
 class RaycastCamera;
 class RaycastPhysics;
+class PrintConsole;
 
 class Game {
     private:
@@ -21,7 +22,7 @@ class Game {
     public:
         void init(int sw, int sh);
         void dispose();
-        bool update(float dt);
+        bool update(float dt, PrintConsole* console);
 
         short* getBuffer();
         int getBufferSize();

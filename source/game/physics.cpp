@@ -41,19 +41,27 @@ void RaycastPhysics::update(float dt) {
 
     // test collision with the map
     if (this->map) {
-        const unsigned char* mapTiles = this->map->getMap();
-        if (mapTiles) {
-            int mapWidth = this->map->getWidth();
+        if (this->map->getMap()) {
             int tileX = (int)tX;
             int tileY = (int)this->camera.y;
-            if (mapTiles[tileY * mapWidth + tileX] == 1) {
+            char tile = this->map->getTile(tileX, tileY);
+            if (tile == 1) {
                 tX = this->camera.x;
+            } else if (tile == 2) { // door
+                if (!map->isDoorOpen(tileX, tileY)) {
+                    tX = this->camera.x;
+                }
             }
 
             tileX = (int)this->camera.x;
 	        tileY = (int)tY;
-            if (mapTiles[tileY * mapWidth + tileX] == 1) {
+            tile = this->map->getTile(tileX, tileY);
+            if (tile == 1) {
                 tY = this->camera.y;
+            } else if (tile == 2) { // door
+                if (!map->isDoorOpen(tileX, tileY)) {
+                    tY = this->camera.y;
+                }
             }
         }
     }

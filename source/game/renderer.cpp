@@ -1,11 +1,12 @@
 #include "renderer.h"
 #include "camera.h"
 #include "map.h"
+#include "door.h"
 
 #include <math.h>
 
-#include "stone_wall.h"
-#include "door.h"
+#include "wall_stone.h"
+#include "wall_door.h"
 
 #define BLACK 	0x8000
 #define WHITE 	0xFFFF
@@ -51,23 +52,7 @@ RaycastRenderer::RaycastRenderer(int width, int height, float fov) {
     this->fov = fov;
 }
 
-float doorLength = 1.0f;
-float doorSpeed = 0.8f;
-bool openDoor = true;
-
 void RaycastRenderer::render(RaycastCamera* camera, Map* map, float dt) {
-
-    // if (doorLength <= 0.0f)
-    //     openDoor = false;
-    // else if (doorLength >= 1.0f)
-    //     openDoor = true;
-
-    // if (openDoor) {
-    //     doorLength -= doorSpeed * dt;
-    // } else {
-    //     doorLength += doorSpeed * dt;
-    // }
-
     float angleSweepStart = camera->getAngle() - this->fov / 2.0f;
 
     for (int x = 0; x < this->gWidth; x++) {
@@ -128,33 +113,38 @@ void RaycastRenderer::render(RaycastCamera* camera, Map* map, float dt) {
                 hitWall = true;
                 distanceToWall = DRAW_DISTANCE;
             } else {
-                const unsigned char* mapTiles = map->getMap();
-                if (mapTiles[mapY * map->getWidth() + mapX] == 1) {
+                char tile = map->getTile(mapX, mapY);
+                if (tile == 1) {
                     hitWall = true;
                     if (side == 0)  sampleX = camera->getY() + rayDirY * distanceToWall;
                     else            sampleX = camera->getX() + rayDirX * distanceToWall;
                     sampleX -= floor(sampleX);
                 }
-                if (mapTiles[mapY * map->getWidth() + mapX] == 2) { // indented wall
+                if (tile == 2) { // door
                     float testPointX = camera->getX() + rayDirX * (distanceToWall + 0.5f);
                     float testPointY = camera->getY() + rayDirY * (distanceToWall + 0.5f);
 
-                    int doorMapX = (int)testPointX;
-                    int doorMapY = (int)testPointY;
-                    if (mapTiles[doorMapY * map->getWidth() + doorMapX] == 2) {
+                    int doorX = (int)testPointX;
+                    int doorY = (int)testPointY;
+                    if (map->getTile(doorX, doorY) == 2) {
                         distanceToWall += 0.5f;
                         hitWall = true;
 
+                        // figure out the texture X uv coordinate. it will be a 0 - 1 value so we can use it later
+                        // for figuring out how much of the door is open.
                         if (side == 0)  sampleX = camera->getY() + rayDirY * distanceToWall;
                         else            sampleX = camera->getX() + rayDirX * distanceToWall;
                         sampleX -= floor(sampleX);
 
-                        if (sampleX > doorLength) {
-                            hitWall = false;
-                            distanceToWall -= 0.5f;
-                        } else {
-                            sampleX -= doorLength;
-                            isDoor = true;
+                        Door* door = map->getDoor(doorX, doorY);
+                        if (door) {
+                            if (sampleX > door->getTime()) {
+                                hitWall = false;
+                                distanceToWall -= 0.5f;
+                            } else {
+                                sampleX -= door->getTime();
+                                isDoor = true;
+                            }
                         }
                     }
                 }
@@ -173,18 +163,14 @@ void RaycastRenderer::render(RaycastCamera* camera, Map* map, float dt) {
             } else if (y > ceiling && y <= floor) {
                 if (distanceToWall < DRAW_DISTANCE) {
                     float sampleY = ((float)y - (float)ceiling) / ((float)floor - (float)ceiling);
-                    
+                    int sx = sampleX * 32.0f;
+                    int sy = sampleY * 32.0f;
 
                     if (isDoor) {
-                        int sx = sampleX * 20.0f;
-                        int sy = sampleY * 32.0f;
-                        putPixel(x, y, door[sy * 20 + sx]);
+                        putPixel(x, y, wall_door[sy * 32 + sx]);
                     } else {
-                        int sx = sampleX * 32.0f;
-                        int sy = sampleY * 32.0f;
-                        putPixel(x, y, stone_wall[sy * 32 + sx]);
+                        putPixel(x, y, wall_stone[sy * 32 + sx]);
                     }
-                    
                 } else {
                     putPixel(x, y, BLACK);
                 }
@@ -194,6 +180,17 @@ void RaycastRenderer::render(RaycastCamera* camera, Map* map, float dt) {
             }
         }
     }
+
+    // for (int y = 0; y < this->gHeight; y++) {
+    //     for (int x = 0; x < this->gWidth; x++) {
+    //         float sampleY = (float)y / (float)this->gHeight;
+    //         float sampleX = (float)x / (float)this->gWidth;
+
+    //         int sx = sampleX * 32.0f;
+    //         int sy = sampleY * 32.0f;
+    //         putPixel(x, y, door[sy * 32 + sx]);
+    //     }
+    // }
 }
 
 void RaycastRenderer::putPixel(int x, int y, short pixel) {

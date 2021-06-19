@@ -26,7 +26,7 @@ int main(void) {
 		float dt = (float)deltaTick / (float)BUS_CLOCK;
 		cpuStartTiming(0);
 
-		if (!game.update(dt)) {
+		if (!game.update(dt, console)) {
 			break;
 		}
 

@@ -4,8 +4,12 @@
 #include "renderer.h"
 #include "camera.h"
 #include "physics.h"
+#include "door.h"
 
 #include <string.h>
+#include <math.h>
+#include <nds.h>
+#include <stdio.h>
 
 #define FOV     0.7853975
 
@@ -38,7 +42,7 @@ void Game::init(int sw, int sh) {
     this->renderer = new RaycastRenderer(sw, sh, FOV);
 }
 
-bool Game::update(float dt) {
+bool Game::update(float dt, PrintConsole* console) {
     this->input->update();
     if (input->isStartPressed()) return false;
     if (input->isLeftHeld()) this->camera->setTurnSpeed(-TURN_SPEED);
@@ -47,8 +51,26 @@ bool Game::update(float dt) {
     if (input->isDownHeld()) this->camera->setForwardSpeed(-WALK_SPEED);
     if (input->isLHeld()) this->camera->setStrafeSpeed(WALK_SPEED * -0.5f);
     if (input->isRHeld()) this->camera->setStrafeSpeed(WALK_SPEED * 0.5f);
+    
+    if (input->isAPressed()) {
+        // check if a door is in front of the camera.
+        TileInfo info = mapManager->getTileDDA(camera->getX(), camera->getY(), camera->getFacingX(), camera->getFacingY());
+        if (info.id == 2) {
+            if (info.distance < 2.0f) {
+                Door* door = mapManager->getDoor(info.x, info.y);
+                if (door) {
+                    door->toggle();
+                }
+            }
+        }
+    }
+
+    // console->cursorX = 0;
+    // console->cursorY = 0;
+    // printf("c: (%d, %d), f: (%d, %d)", cameraTileX, cameraTileY, tileX, tileY);
 
     this->physics->update(dt);
+    this->mapManager->update(dt);
     this->renderer->render(this->camera, this->mapManager, dt);
 
     return true;
