@@ -18,7 +18,7 @@ class RaycastRenderer {
         void putPixel(int x, int y, short pixel);
     public:
         RaycastRenderer(int width, int height, float fov);
-        void render(RaycastCamera* camera, Map* map);
+        void render(RaycastCamera* camera, Map* map, float dt);
 
         short* getBuffer();
         int getBufferSize();

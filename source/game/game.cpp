@@ -49,7 +49,7 @@ bool Game::update(float dt) {
     if (input->isRHeld()) this->camera->setStrafeSpeed(WALK_SPEED * 0.5f);
 
     this->physics->update(dt);
-    this->renderer->render(this->camera, this->mapManager);
+    this->renderer->render(this->camera, this->mapManager, dt);
 
     return true;
 }
