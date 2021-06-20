@@ -85,9 +85,7 @@ void RaycastRenderer::render(RaycastCamera* camera, Map* map, float dt) {
         int mapX = (int)camera->getX();
         int mapY = (int)camera->getY();
 
-        float sampleX = 0.0f;
         int side;
-        bool isDoor = false;
 
         if (rayDirX < 0) {
             stepX = -1;
@@ -105,7 +103,8 @@ void RaycastRenderer::render(RaycastCamera* camera, Map* map, float dt) {
             sideDistY = (float(mapY + 1) - camera->getY()) * rayUnitStepSizeY;
         }
 
-        char tile;        
+        float u = 0.0f; // the U portion of the UV coordinates for texturing.
+        char tile;      // the tile that was hit by the ray.      
         while (!hitWall && distanceToWall < DRAW_DISTANCE) {
             if (sideDistX < sideDistY) {
                 mapX += stepX;
@@ -126,12 +125,12 @@ void RaycastRenderer::render(RaycastCamera* camera, Map* map, float dt) {
                 tile = map->getTile(mapX, mapY);
                 if (tile == 1) {
                     hitWall = true;
-                    if (side == 0)  sampleX = camera->getY() + rayDirY * distanceToWall;
-                    else            sampleX = camera->getX() + rayDirX * distanceToWall;
-                    sampleX -= floor(sampleX);
+                    if (side == 0)  u = camera->getY() + rayDirY * distanceToWall;
+                    else            u = camera->getX() + rayDirX * distanceToWall;
+                    u -= floor(u);
 
-                    if (side == 0 && rayDirX < 0) sampleX = 1 - sampleX;
-                    if (side == 1 && rayDirY > 0) sampleX = 1 - sampleX;
+                    if (side == 0 && rayDirX < 0) u = 1 - u;
+                    if (side == 1 && rayDirY > 0) u = 1 - u;
                 }
                 if (tile == 2) { // door
                     float testPointX = camera->getX() + rayDirX * (distanceToWall + 0.5f);
@@ -145,21 +144,17 @@ void RaycastRenderer::render(RaycastCamera* camera, Map* map, float dt) {
 
                         // figure out the texture X uv coordinate. it will be a 0 - 1 value so we can use it later
                         // for figuring out how much of the door is open.
-                        if (side == 0)  sampleX = camera->getY() + rayDirY * distanceToWall;
-                        else            sampleX = camera->getX() + rayDirX * distanceToWall;
-                        sampleX -= floor(sampleX);
-
-                        // if (side == 0 && rayDirX < 0) sampleX = 1.0f - sampleX;
-                        // if (side == 1 && rayDirY > 0) sampleX = 1.0f - sampleX;
+                        if (side == 0)  u = camera->getY() + rayDirY * distanceToWall;
+                        else            u = camera->getX() + rayDirX * distanceToWall;
+                        u -= floor(u);
 
                         Door* door = map->getDoor(doorX, doorY);
                         if (door) {
-                            if (sampleX > door->getTime()) {
+                            if (u > door->getTime()) {
                                 hitWall = false;
                                 distanceToWall -= 0.5f;
                             } else {
-                                sampleX -= door->getTime();
-                                isDoor = true;
+                                u -= door->getTime();
                             }
                         }
                     }
@@ -183,23 +178,10 @@ void RaycastRenderer::render(RaycastCamera* camera, Map* map, float dt) {
                 putPixel(x, y, BLACK);
             } else if (y > ceiling && y <= floor) {
                 if (distanceToWall < DRAW_DISTANCE) {
-                    float sampleY = ((float)y - (float)ceiling) / ((float)floor - (float)ceiling);
+                    float v = ((float)y - (float)ceiling) / ((float)floor - (float)ceiling);
                     if (pSprite) {
-                        short pixel = pSprite->sample(sampleX, sampleY);
-                        //pixel = colorLerp16(pixel, 0x8000, distanceToWall / DRAW_DISTANCE);
+                        short pixel = pSprite->sample(u, v);
                         putPixel(x, y, pixel);
-                        //short pixel = colorLerp16(BLACK, WHITE, sampleX);
-                        //putPixel(x, y, pixel);
-
-                        // if (sampleX < 0.5f) {
-                        //     putPixel(x, y, RED);
-                        // } else {
-                        //     putPixel(x, y, GREEN);
-                        // }
-
-                        // if (sampleX < 0) {
-                        //     putPixel(x, y, RED);
-                        // }
                     }
                 } else {
                     putPixel(x, y, BLACK);
