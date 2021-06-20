@@ -6,6 +6,9 @@
 
 // Size: 16384 bytes
 // Dimensions: 32x32
-extern const unsigned short wall_door[1024];
+#define WALL_DOOR_WIDTH 32
+#define WALL_DOOR_HEIGHT 32
+#define WALL_DOOR_LEN 1024
+extern const unsigned short wall_door[WALL_DOOR_LEN];
 
 #endif // __WALL_DOOR__

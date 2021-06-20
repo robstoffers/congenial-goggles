@@ -6,6 +6,7 @@ class Input;
 class RaycastRenderer;
 class RaycastCamera;
 class RaycastPhysics;
+class RaycastSprites;
 class PrintConsole;
 
 class Game {
@@ -18,7 +19,8 @@ class Game {
         Input* input;
         RaycastRenderer* renderer;
         RaycastCamera* camera;
-        RaycastPhysics* physics;
+        RaycastPhysics* pPhysics;
+        
     public:
         void init(int sw, int sh);
         void dispose();

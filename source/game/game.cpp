@@ -4,6 +4,7 @@
 #include "renderer.h"
 #include "camera.h"
 #include "physics.h"
+#include "sprites.h"
 #include "door.h"
 
 #include <string.h>
@@ -31,15 +32,17 @@ void Game::init(int sw, int sh) {
 
     this->input = new Input();
 
-    this->physics = new RaycastPhysics();
-    this->physics->setMap(this->mapManager);
 
-    this->camera = new RaycastCamera(this->physics->getCamera());
-    this->camera->setX(1.5f);
-    this->camera->setY(1.5f);
-    this->camera->setAngle(0.0f);
 
-    this->renderer = new RaycastRenderer(sw, sh, FOV);
+    this->pPhysics = new RaycastPhysics();
+    this->pPhysics->setMap(this->mapManager);
+
+    this->camera = new RaycastCamera(this->pPhysics->getCamera(), FOV);
+    this->camera->setX(2.5f);
+    this->camera->setY(9.5f);
+    this->camera->setAngle(1.5708f);
+
+    this->renderer = new RaycastRenderer(sw, sh);
 }
 
 bool Game::update(float dt, PrintConsole* console) {
@@ -69,7 +72,7 @@ bool Game::update(float dt, PrintConsole* console) {
     // console->cursorY = 0;
     // printf("c: (%d, %d), f: (%d, %d)", cameraTileX, cameraTileY, tileX, tileY);
 
-    this->physics->update(dt);
+    this->pPhysics->update(dt);
     this->mapManager->update(dt);
     this->renderer->render(this->camera, this->mapManager, dt);
 
@@ -77,7 +80,7 @@ bool Game::update(float dt, PrintConsole* console) {
 }
 
 void Game::dispose() {
-    delete physics;
+    delete pPhysics;
     delete camera;
     delete renderer;
     delete mapManager;

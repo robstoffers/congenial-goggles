@@ -18,6 +18,9 @@ Map::Map() {
         if (test_map[i] == 2) {
             this->doorLookup[doorCounter] = i;
             doorCounter++;
+            if (doorCounter == MAX_DOORS) {
+                break;
+            }
         }
     }
 }
