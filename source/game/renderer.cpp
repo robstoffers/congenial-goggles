@@ -8,6 +8,7 @@
 #include "wall_door.h"
 
 #include <math.h>
+#include <string.h>
 
 #define BLACK 	0x8000
 #define WHITE 	0xFFFF
@@ -44,21 +45,23 @@ RaycastRenderer::RaycastRenderer(int width, int height) {
     this->sBufferLen = this->sWidth * this->sHeight;
     this->sBufferSize = this->sBufferLen * 2;
     this->sBuffer = new short[this->sBufferLen];
-    for(int i = 0; i < this->sBufferLen; i++){
-		this->sBuffer[i] = 0xEEEE;
-	}
+    cls();
 
     // how much of the screen buffer are we going to use for the game? on the DS
     // filling the whole screen is super slow so instead we'll use 1/4 of the screen.
     this->gWidth = this->sWidth / 2;
     this->gHeight = this->sHeight / 2;
 
-    this->pSpriteManager = new RaycastSprites();
-    this->wallSprite = this->pSpriteManager->addSprite(wall_stone, WALL_STONE_WIDTH, WALL_STONE_HEIGHT, 0);
-    this->doorSprite = this->pSpriteManager->addSprite(wall_door, WALL_DOOR_WIDTH, WALL_DOOR_HEIGHT, 0);
+    // this->pSpriteManager = new RaycastSprites();
+    this->wallSprite = RaycastSprites::getInstance()->addSprite(wall_stone, WALL_STONE_WIDTH, WALL_STONE_HEIGHT);
+    this->doorSprite = RaycastSprites::getInstance()->addSprite(wall_door, WALL_DOOR_WIDTH, WALL_DOOR_HEIGHT);
 }
 
-void RaycastRenderer::render(RaycastCamera* camera, Map* map, float dt) {
+void RaycastRenderer::cls() {
+    memset(this->sBuffer, 0xEE, this->sBufferSize);
+}
+
+void RaycastRenderer::renderMap(RaycastCamera* camera, Map* map) {
     float cameraFOV = camera->getFOV();
     float cameraHalfFOV = cameraFOV * 0.5f;
 
@@ -139,23 +142,15 @@ void RaycastRenderer::render(RaycastCamera* camera, Map* map, float dt) {
                     int doorX = (int)testPointX;
                     int doorY = (int)testPointY;
                     if (map->getTile(doorX, doorY) == 2) {
-                        distanceToWall += 0.5f;
-                        hitWall = true;
-
-                        // figure out the texture X uv coordinate. it will be a 0 - 1 value so we can use it later
-                        // for figuring out how much of the door is open.
-                        if (side == 0)  u = camera->getY() + rayDirY * distanceToWall;
-                        else            u = camera->getX() + rayDirX * distanceToWall;
-                        u -= floor(u);
+                        if (side == 0)  u = testPointY;
+                        else            u = testPointX;
+                        u = 1 - (u - floor(u));
 
                         Door* door = map->getDoor(doorX, doorY);
-                        if (door) {
-                            if (u > door->getTime()) {
-                                hitWall = false;
-                                distanceToWall -= 0.5f;
-                            } else {
-                                u -= door->getTime();
-                            }
+                        if (door && u > door->getTime()) {
+                            hitWall = true;
+                            distanceToWall += 0.5f;
+                            u -= door->getTime();
                         }
                     }
                 }
@@ -170,7 +165,7 @@ void RaycastRenderer::render(RaycastCamera* camera, Map* map, float dt) {
 
         RaycastSprite* pSprite = NULL;
         if (distanceToWall < DRAW_DISTANCE) {
-            pSprite = pSpriteManager->getSprite(tile - 1);
+            pSprite = RaycastSprites::getInstance()->getSprite(tile - 1);
         }
         
         for (int y = 0; y < this->gHeight; y++) {
@@ -178,11 +173,14 @@ void RaycastRenderer::render(RaycastCamera* camera, Map* map, float dt) {
                 putPixel(x, y, BLACK);
             } else if (y > ceiling && y <= floor) {
                 if (distanceToWall < DRAW_DISTANCE) {
-                    float v = ((float)y - (float)ceiling) / ((float)floor - (float)ceiling);
+                    int wallHeight = floor - ceiling;
+                    int ceilingDelta = y - ceiling;
+                    float v = (float)ceilingDelta / (float)wallHeight;
                     if (pSprite) {
                         short pixel = pSprite->sample(u, v);
                         putPixel(x, y, pixel);
                     }
+                    //putPixel(x, y, colorLerp16(BLACK, RED, u));
                 } else {
                     putPixel(x, y, BLACK);
                 }
@@ -192,64 +190,78 @@ void RaycastRenderer::render(RaycastCamera* camera, Map* map, float dt) {
             }
         }
     }
+}
 
-    // Render entities (enemies, debris, furniture, items on floor, etc.)
-    for (int i = 0; i < MAX_ENTITIES; i++) {
-        float toEntityX = entities[i].x - camera->getX();
-        float toEntityY = entities[i].y - camera->getY();
-        float distFromCamera = sqrtf(toEntityX * toEntityX + toEntityY * toEntityY);
+void RaycastRenderer::renderEntities() {
+    // // Render entities (enemies, debris, furniture, items on floor, etc.)
+    // for (int i = 0; i < MAX_ENTITIES; i++) {
+    //     float toEntityX = entities[i].x - camera->getX();
+    //     float toEntityY = entities[i].y - camera->getY();
+    //     float distFromCamera = sqrtf(toEntityX * toEntityX + toEntityY * toEntityY);
 
-        float cameraDirX = camera->getFacingX();
-        float cameraDirY = camera->getFacingY();
-        float entityAngle = atan2f(cameraDirY, cameraDirX) - atan2f(toEntityY, toEntityX);
-        if (entityAngle < -PI) {
-            entityAngle += 2.0f * PI;
-        }
-        if (entityAngle > PI) {
-            entityAngle -= 2.0f * PI;
-        }
+    //     float cameraDirX = camera->getFacingX();
+    //     float cameraDirY = camera->getFacingY();
+    //     float entityAngle = atan2f(cameraDirY, cameraDirX) - atan2f(toEntityY, toEntityX);
+    //     if (entityAngle < -PI) {
+    //         entityAngle += 2.0f * PI;
+    //     }
+    //     if (entityAngle > PI) {
+    //         entityAngle -= 2.0f * PI;
+    //     }
 
-        bool inView = fabs(entityAngle) < cameraHalfFOV;
+    //     bool inView = fabs(entityAngle) < cameraHalfFOV;
 
-        if (inView && distFromCamera >= 0.5f && distFromCamera < DRAW_DISTANCE) {
-            float entityCeiling = (float)(this->gHeight / 2.0f) - this->gHeight / distFromCamera;
-            float entityFloor = this->gHeight - entityCeiling;
-            float entityHeight = entityFloor - entityCeiling;
+    //     if (inView && distFromCamera >= 0.5f && distFromCamera < DRAW_DISTANCE) {
+    //         float entityCeiling = (float)(this->gHeight / 2.0f) - this->gHeight / distFromCamera;
+    //         float entityFloor = this->gHeight - entityCeiling;
+    //         float entityHeight = entityFloor - entityCeiling;
             
-            //RaycastSprite* pSprite = this->pSpriteManager->getSprite(entities[i].spriteId);
-            //int spriteWidth = pSprite->getWidth();
-            //int spriteHeight = pSprite->getHeight();
-            //float aspectRatio = spriteHeight / spriteWidth;
-            //float entityWidth = entityHeight / fAspectRatio;
-            //float entityMiddle = (0.5f * (entityAngle / cameraHalfFOV) + 0.5f) * (float)gWidth;
+    //         //RaycastSprite* pSprite = this->pSpriteManager->getSprite(entities[i].spriteId);
+    //         //int spriteWidth = pSprite->getWidth();
+    //         //int spriteHeight = pSprite->getHeight();
+    //         //float aspectRatio = spriteHeight / spriteWidth;
+    //         //float entityWidth = entityHeight / fAspectRatio;
+    //         //float entityMiddle = (0.5f * (entityAngle / cameraHalfFOV) + 0.5f) * (float)gWidth;
 
-            //draw the sprite.
-            //for (int x = 0; x < spriteWidth; x++) {
-                //for (int y = 0; y < spriteHeight; y++) {
-                    //float u = x / spriteWidth;
-                    //float v = y / spriteHeight;
-                    //int spriteColumn = (int)(entityMiddle + x - (spriteWidth / 2.0f));
-                    //if (spriteColumn >= 0 && spriteColumn < gWidth) {
-                        //short spritePixel = pSprite->sample(u, v);
-                        // The first bit in the pixel is for transparency. If it is 0 then we won't draw it.
-                        //if (spritePixel >> 15)
-                            //putPixel(spriteColumn, entityCeiling + y, spritePixel);
-                    //}
-                //}
-            //}
-        }
-    }
-
-    // for (int y = 0; y < this->gHeight; y++) {
-    //     for (int x = 0; x < this->gWidth; x++) {
-    //         float sampleY = (float)y / (float)this->gHeight;
-    //         float sampleX = (float)x / (float)this->gWidth;
-
-    //         int sx = sampleX * 32.0f;
-    //         int sy = sampleY * 32.0f;
-    //         putPixel(x, y, door[sy * 32 + sx]);
+    //         //draw the sprite.
+    //         //for (int x = 0; x < spriteWidth; x++) {
+    //             //for (int y = 0; y < spriteHeight; y++) {
+    //                 //float u = x / spriteWidth;
+    //                 //float v = y / spriteHeight;
+    //                 //int spriteColumn = (int)(entityMiddle + x - (spriteWidth / 2.0f));
+    //                 //if (spriteColumn >= 0 && spriteColumn < gWidth) {
+    //                     //short spritePixel = pSprite->sample(u, v);
+    //                     // The first bit in the pixel is for transparency. If it is 0 then we won't draw it.
+    //                     //if (spritePixel >> 15)
+    //                         //putPixel(spriteColumn, entityCeiling + y, spritePixel);
+    //                 //}
+    //             //}
+    //         //}
     //     }
     // }
+}
+
+void RaycastRenderer::render(RaycastCamera* camera, Map* map) {
+    cls();
+
+    this->renderMap(camera, map);
+    //this->renderEntities();
+
+    RaycastSprite* skeleton = RaycastSprites::getInstance()->getSprite(2);
+    if (skeleton) {
+        int width = skeleton->getWidth();
+        int height = skeleton->getHeight();
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                float u = (float)x / (float)width;
+                float v = (float)y / ((float)height - 1);
+                short pixel = skeleton->sample(u, v);
+                if (pixel >> 15) {
+                    putPixel(x, y, pixel);
+                }
+            }
+        }
+    }
 }
 
 void RaycastRenderer::putPixel(int x, int y, short pixel) {

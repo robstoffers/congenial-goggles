@@ -25,14 +25,16 @@ class RaycastRenderer {
 
         int wallSprite;
         int doorSprite;
-        RaycastSprites* pSpriteManager;
 
         RaycastEntity entities[MAX_ENTITIES];
 
+        void cls();
         void putPixel(int x, int y, short pixel);
+        void renderMap(RaycastCamera* camera, Map* map);
+        void renderEntities();
     public:
         RaycastRenderer(int width, int height);
-        void render(RaycastCamera* camera, Map* map, float dt);
+        void render(RaycastCamera* camera, Map* map);
 
         short* getBuffer();
         int getBufferSize();

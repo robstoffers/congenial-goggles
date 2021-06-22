@@ -4,6 +4,34 @@
 
 #include "game.h"
 
+#include <malloc.h>    // for mallinfo()
+#include <unistd.h>    // for sbrk()
+
+extern u8 __end__[];        // end of static code and data
+extern u8 __eheap_end[];    // farthest point to which the heap will grow
+
+u8* getHeapStart() {
+        return __end__;
+}
+
+u8* getHeapEnd() {
+        return (u8*)sbrk(0);
+}
+
+u8* getHeapLimit() {
+        return __eheap_end;
+}
+
+int getMemUsed() {    // returns the amount of used memory in bytes
+        struct mallinfo mi = mallinfo();
+        return mi.uordblks;
+}
+
+int getMemFree() {    // returns the amount of free memory in bytes
+        struct mallinfo mi = mallinfo();
+        return mi.fordblks + (getHeapLimit() - getHeapEnd());
+}
+
 u16 colorLerp16(u16 from, u16 to, float amount);
 
 int main(void) {
@@ -11,13 +39,13 @@ int main(void) {
 	
 	consoleDemoInit();
 
-	Game game;
-	game.init(SCREEN_WIDTH, SCREEN_HEIGHT);
-
 	int bg = bgInit(2, BgType_Bmp16, BgSize_B16_256x256, 0, 0);
 	bgSetScale(bg, 128, 128);
 
 	PrintConsole* console = consoleDemoInit();
+
+	Game game;
+	game.init(SCREEN_WIDTH, SCREEN_HEIGHT, console);
 	
 	cpuStartTiming(0);
 
@@ -26,13 +54,29 @@ int main(void) {
 		float dt = (float)deltaTick / (float)BUS_CLOCK;
 		cpuStartTiming(0);
 
-		if (!game.update(dt, console)) {
+		if (!game.update(dt)) {
 			break;
 		}
 
 		dmaCopy(game.getBuffer(), BG_GFX, game.getBufferSize());
 
 		swiWaitForVBlank();
+
+		int used = getMemUsed();
+		int free = getMemFree();
+
+		float fps = 1.0f / dt;
+		console->cursorX = 0;
+		console->cursorY = 0;
+		printf("fps: %.2f", dt);
+
+		console->cursorX = 0;
+		console->cursorY = 1;
+		printf("used: %d bytes", used);
+
+		console->cursorX = 0;
+		console->cursorY = 2;
+		printf("free: %d bytes", free);
 	}
 
 	game.dispose();

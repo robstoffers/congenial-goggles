@@ -7,6 +7,8 @@
 #include "sprites.h"
 #include "door.h"
 
+#include "skeleton.h"
+
 #include <string.h>
 #include <math.h>
 #include <nds.h>
@@ -24,15 +26,15 @@ int Game::getBufferSize() {
     return this->renderer->getBufferSize();
 }
 
-void Game::init(int sw, int sh) {
+void Game::init(int sw, int sh, PrintConsole* console) {
     mapManager = new Map();
     map = mapManager->getMap();
     mapWidth = mapManager->getWidth();
     mapHeight = mapManager->getHeight();
 
+    this->pConsole = console;
+
     this->input = new Input();
-
-
 
     this->pPhysics = new RaycastPhysics();
     this->pPhysics->setMap(this->mapManager);
@@ -43,9 +45,15 @@ void Game::init(int sw, int sh) {
     this->camera->setAngle(1.5708f);
 
     this->renderer = new RaycastRenderer(sw, sh);
+
+    RaycastSprites* sprites = RaycastSprites::getInstance();
+    sprites->addSprite(skeleton, SKELETON_WIDTH, SKELETON_HEIGHT);
+    RaycastSprite* sprite = sprites->getSprite(2);
+    sprite->addAnimation("walk", 0, 64, 32, 32, 10, true, 8);
+    sprite->playAnimation(0);
 }
 
-bool Game::update(float dt, PrintConsole* console) {
+bool Game::update(float dt) {
     this->input->update();
     if (input->isStartPressed()) return false;
     if (input->isLeftHeld()) this->camera->setTurnSpeed(-TURN_SPEED);
@@ -74,7 +82,10 @@ bool Game::update(float dt, PrintConsole* console) {
 
     this->pPhysics->update(dt);
     this->mapManager->update(dt);
-    this->renderer->render(this->camera, this->mapManager, dt);
+
+    RaycastSprites::getInstance()->update(dt);
+
+    this->renderer->render(this->camera, this->mapManager);
 
     return true;
 }

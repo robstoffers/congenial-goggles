@@ -18,15 +18,15 @@ void Door::toggle() {
 
 void Door::update(float dt) {
     if (this->state == DOOR_OPENING) {
-        this->time -= DOOR_SPEED * dt;
-        if (this->time <= 0.1f) {
-            this->time = 0.1f;
+        this->time += DOOR_SPEED * dt;
+        if (this->time >= 0.9f) {
+            this->time = 0.9f;
             this->state = DOOR_OPEN;
         }
     } else if (this->state == DOOR_CLOSING) {
-        this->time += DOOR_SPEED * dt;
-        if (this->time >= 1.0f) {
-            this->time = 1.0f;
+        this->time -= DOOR_SPEED * dt;
+        if (this->time <= 0.0f) {
+            this->time = 0.0f;
             this->state = DOOR_CLOSED;
         }
     }

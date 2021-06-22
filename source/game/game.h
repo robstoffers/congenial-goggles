@@ -20,11 +20,14 @@ class Game {
         RaycastRenderer* renderer;
         RaycastCamera* camera;
         RaycastPhysics* pPhysics;
+
+        // debugging
+        PrintConsole* pConsole;
         
     public:
-        void init(int sw, int sh);
+        void init(int sw, int sh, PrintConsole* console);
         void dispose();
-        bool update(float dt, PrintConsole* console);
+        bool update(float dt);
 
         short* getBuffer();
         int getBufferSize();

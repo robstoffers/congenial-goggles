@@ -2,8 +2,8 @@
 #define __DOOR_H__
 
 #define DOOR_SPEED 2.0f
-#define DOOR_OPEN 0
-#define DOOR_CLOSED 1
+#define DOOR_OPEN 1
+#define DOOR_CLOSED 0
 #define DOOR_OPENING 2
 #define DOOR_CLOSING 3
 
