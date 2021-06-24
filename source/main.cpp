@@ -1,11 +1,10 @@
 #include <nds.h>
 #include <stdlib.h>
 #include <stdio.h>
-
-#include "game.h"
-
 #include <malloc.h>    // for mallinfo()
 #include <unistd.h>    // for sbrk()
+
+#include "game.h"
 
 extern u8 __end__[];        // end of static code and data
 extern u8 __eheap_end[];    // farthest point to which the heap will grow
@@ -62,13 +61,12 @@ int main(void) {
 
 		swiWaitForVBlank();
 
-		int used = getMemUsed();
-		int free = getMemFree();
-
-		float fps = 1.0f / dt;
 		console->cursorX = 0;
 		console->cursorY = 0;
 		printf("fps: %.2f", dt);
+
+		int used = getMemUsed();
+		int free = getMemFree();
 
 		console->cursorX = 0;
 		console->cursorY = 1;

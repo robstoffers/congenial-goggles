@@ -19,8 +19,7 @@ class RaycastCamera {
         float getRightY();  // Returns the Y component of the camera right vector.
         float getFOV();
 
-        void setX(float x);                 // Set the camera x-coordinate.
-        void setY(float y);                 // Set the camera y-coordinate.
+        void setPosition(float x, float y);
         void setAngle(float a);             // Set the camera angle.
         void setForwardSpeed(float speed);  // Set the camera movement speed.
         void setStrafeSpeed(float speed);   // Set the camera strafe speed.

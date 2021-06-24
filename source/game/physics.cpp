@@ -1,79 +1,102 @@
 #include "physics.h"
 #include "map.h"
+#include "pool.h"
 
 #include <math.h>
 
-RaycastPhysics::RaycastPhysics() {
-    for (int i = 0; i < MAX_OBJECTS; i++) {
-        this->objects[i] = PhysicsObject();
-        this->objects[i].active = false;
-    }
-    this->camera = PhysicsObject();
-    this->camera.vX = 0.0f;
-    this->camera.vY = 0.0f;
-    this->map = nullptr;
+PhysicsObject::PhysicsObject() { }
+
+void PhysicsObject::setVelocity(float x, float y) {
+    this->vX = x;
+    this->vY = y;
+}
+void PhysicsObject::setPosition(float x, float y) {
+    this->x = x;
+    this->y = y;
+}
+void PhysicsObject::setRotation(float a) {
+    this->a = a;
+}
+void PhysicsObject::setRotationVelocity(float v) {
+    this->aSpeed = v;
+}
+void PhysicsObject::rotate(float a) {
+    this->a += a;
+}
+void PhysicsObject::reset(float x, float y, float a) {
+    this->x = x;
+    this->y = y;
+    this->a = a;
+}
+void PhysicsObject::update(float dt) {
+    a += (aSpeed * dt);
+    forwardX = cosf(a);
+    forwardY = sinf(a);
+    x += (vX * dt);
+    y += (vY * dt);
+
+    vX = 0;
+    vY = 0;
+    aSpeed = 0;
 }
 
-PhysicsObject* RaycastPhysics::getPhysics() {
-    for (int i = 0; i < MAX_OBJECTS; i++) {
-        if (!this->objects[i].active) {
-            return &this->objects[i];
-        }
-    }
-    return nullptr;
+RaycastPhysicsManager::RaycastPhysicsManager() {    
+    this->map = NULL;
+    _pool = new Pool<PhysicsObject>(20);
+}
+RaycastPhysicsManager::~RaycastPhysicsManager() {
+    delete _pool;
 }
 
-PhysicsObject* RaycastPhysics::getCamera() {
-    return &this->camera;
+PhysicsObject* RaycastPhysicsManager::getPhysics() {
+    PhysicsObject* item = _pool->next();
+    item->reset(0, 0, 0);
+    return item;
 }
 
-void RaycastPhysics::setMap(Map* map) {
+void RaycastPhysicsManager::releasePhysics(PhysicsObject* object) {
+    _pool->release(object);
+}
+
+void RaycastPhysicsManager::setMap(Map* map) {
     this->map = map;
 }
 
-void RaycastPhysics::update(float dt) {
-    this->camera.a += (this->camera.aSpeed * dt);
-    this->camera.forwardX = cosf(this->camera.a);
-    this->camera.forwardY = sinf(this->camera.a);
+void RaycastPhysicsManager::update(float dt) {
+    for (int i = 0; i < _pool->size(); i++) {
+        if (_pool->isActive(i)) {
+            PhysicsObject* item = _pool->item(i);
 
-    float tX = this->camera.x + (this->camera.vX * dt);
-    float tY = this->camera.y + (this->camera.vY * dt);
+            float prevX = item->getX();
+            float prevY = item->getY();
+            item->update(dt);
 
-    // test collision with the map
-    if (this->map) {
-        if (this->map->getMap()) {
-            int tileX = (int)tX;
-            int tileY = (int)this->camera.y;
-            char tile = this->map->getTile(tileX, tileY);
-            if (tile == 1) {
-                tX = this->camera.x;
-            } else if (tile == 2) { // door
-                if (!map->isDoorOpen(tileX, tileY)) {
-                    tX = this->camera.x;
-                }
-            }
+            // test collision with the map
+            if (this->map) {
+                if (this->map->getMap()) {
+                    int tileX = (int)item->getX();
+                    int tileY = (int)prevY;
+                    char tile = this->map->getTile(tileX, tileY);
+                    if (tile == 1) {
+                        item->setX(prevX);
+                    } else if (tile == 2) { // door
+                        if (!map->isDoorOpen(tileX, tileY)) {
+                            item->setX(prevX);
+                        }
+                    }
 
-            tileX = (int)this->camera.x;
-	        tileY = (int)tY;
-            tile = this->map->getTile(tileX, tileY);
-            if (tile == 1) {
-                tY = this->camera.y;
-            } else if (tile == 2) { // door
-                if (!map->isDoorOpen(tileX, tileY)) {
-                    tY = this->camera.y;
+                    tileX = (int)prevX;
+                    tileY = (int)item->getY();
+                    tile = this->map->getTile(tileX, tileY);
+                    if (tile == 1) {
+                        item->setY(prevY);
+                    } else if (tile == 2) { // door
+                        if (!map->isDoorOpen(tileX, tileY)) {
+                            item->setY(prevY);
+                        }
+                    }
                 }
             }
         }
     }
-
-    // TODO: Move other physics objects and test camera collision against them.
-
-    // after everything is done, set the camera position.
-    this->camera.x = tX;
-    this->camera.y = tY;
-
-    // reset velocity
-    this->camera.vX = 0;
-    this->camera.vY = 0;
-    this->camera.aSpeed = 0;
 }

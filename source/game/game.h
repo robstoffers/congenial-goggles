@@ -5,7 +5,7 @@ class Map;
 class Input;
 class RaycastRenderer;
 class RaycastCamera;
-class RaycastPhysics;
+class RaycastPhysicsManager;
 class RaycastSprites;
 class PrintConsole;
 
@@ -19,7 +19,7 @@ class Game {
         Input* input;
         RaycastRenderer* renderer;
         RaycastCamera* camera;
-        RaycastPhysics* pPhysics;
+        RaycastPhysicsManager* pPhysics;
 
         // debugging
         PrintConsole* pConsole;

@@ -9,49 +9,48 @@ RaycastCamera::RaycastCamera(PhysicsObject* pPhysics, float fov) {
 }
 
 float RaycastCamera::getX() {
-    return this->pPhysics->x;
+    return pPhysics->getX();
 }
 float RaycastCamera::getY() {
-    return this->pPhysics->y;
+    return pPhysics->getY();
 }
 float RaycastCamera::getAngle() {
-    return this->pPhysics->a;
+    return pPhysics->getRotation();
 }
 float RaycastCamera::getFacingX() {
-    return this->pPhysics->forwardX;
+    return pPhysics->getForwardX();
 }
 float RaycastCamera::getFacingY() {
-    return this->pPhysics->forwardY;
+    return pPhysics->getForwardY();
 }
 float RaycastCamera::getRightX() { 
-    return this->pPhysics->getRightX();
+    return pPhysics->getRightX();
 }
 float RaycastCamera::getRightY() {
-    return this->pPhysics->getRightY();
+    return pPhysics->getRightY();
 }
 float RaycastCamera::getFOV() {
-    return this->fov;
+    return fov;
 }
 
-void RaycastCamera::setX(float x) { 
-    this->pPhysics->x = x;
-}
-void RaycastCamera::setY(float y) {
-    this->pPhysics->y = y;
+void RaycastCamera::setPosition(float x, float y) {
+    pPhysics->setPosition(x, y);
 }
 void RaycastCamera::setAngle(float a) {
-    this->pPhysics->a = a;
+    pPhysics->setRotation(a);
 }
-void RaycastCamera::setForwardSpeed(float speed) { 
-    this->pPhysics->vX += this->pPhysics->forwardX * speed;
-    this->pPhysics->vY += this->pPhysics->forwardY * speed;
+void RaycastCamera::setForwardSpeed(float speed) {
+    float velocityX = pPhysics->getForwardX() * speed;
+    float velocityY = pPhysics->getForwardY() * speed;
+    pPhysics->setVelocity(velocityX, velocityY);
 }
 void RaycastCamera::setStrafeSpeed(float speed) {
-    this->pPhysics->vX += this->pPhysics->getRightX() * speed;
-    this->pPhysics->vY += this->pPhysics->getRightY() * speed;
+    float velocityX = this->pPhysics->getRightX() * speed;
+    float velocityY =  this->pPhysics->getRightY() * speed;
+    pPhysics->setVelocity(velocityX, velocityY);
 }
 void RaycastCamera::setTurnSpeed(float speed) {
-    this->pPhysics->aSpeed = speed;
+    pPhysics->setRotationVelocity(speed);
 }
 void RaycastCamera::setFOV(float fov) {
     this->fov = fov;

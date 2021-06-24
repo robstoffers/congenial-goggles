@@ -36,12 +36,11 @@ void Game::init(int sw, int sh, PrintConsole* console) {
 
     this->input = new Input();
 
-    this->pPhysics = new RaycastPhysics();
+    this->pPhysics = new RaycastPhysicsManager();
     this->pPhysics->setMap(this->mapManager);
 
-    this->camera = new RaycastCamera(this->pPhysics->getCamera(), FOV);
-    this->camera->setX(2.5f);
-    this->camera->setY(9.5f);
+    this->camera = new RaycastCamera(this->pPhysics->getPhysics(), FOV);
+    this->camera->setPosition(2.5f, 9.5f);
     this->camera->setAngle(1.5708f);
 
     this->renderer = new RaycastRenderer(sw, sh);
@@ -76,9 +75,10 @@ bool Game::update(float dt) {
         }
     }
 
-    // console->cursorX = 0;
-    // console->cursorY = 0;
-    // printf("c: (%d, %d), f: (%d, %d)", cameraTileX, cameraTileY, tileX, tileY);
+    // PhysicsObject* pcam = pPhysics->getCamera();
+    // pConsole->cursorX = 0;
+    // pConsole->cursorY = 3;
+    // printf("cam fy: %.5f", pcam->getForwardY());
 
     this->pPhysics->update(dt);
     this->mapManager->update(dt);

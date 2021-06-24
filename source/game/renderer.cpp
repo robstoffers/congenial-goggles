@@ -243,25 +243,24 @@ void RaycastRenderer::renderEntities() {
 
 void RaycastRenderer::render(RaycastCamera* camera, Map* map) {
     cls();
-
     this->renderMap(camera, map);
-    //this->renderEntities();
+    this->renderEntities();
 
-    RaycastSprite* skeleton = RaycastSprites::getInstance()->getSprite(2);
-    if (skeleton) {
-        int width = skeleton->getWidth();
-        int height = skeleton->getHeight();
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                float u = (float)x / (float)width;
-                float v = (float)y / ((float)height - 1);
-                short pixel = skeleton->sample(u, v);
-                if (pixel >> 15) {
-                    putPixel(x, y, pixel);
-                }
-            }
-        }
-    }
+    // RaycastSprite* skeleton = RaycastSprites::getInstance()->getSprite(2);
+    // if (skeleton) {
+    //     int width = skeleton->getWidth();
+    //     int height = skeleton->getHeight();
+    //     for (int y = 0; y < height; y++) {
+    //         for (int x = 0; x < width; x++) {
+    //             float u = (float)x / (float)width;
+    //             float v = (float)y / ((float)height - 1);
+    //             short pixel = skeleton->sample(u, v);
+    //             if (pixel >> 15) {
+    //                 putPixel(x, y, pixel);
+    //             }
+    //         }
+    //     }
+    // }
 }
 
 void RaycastRenderer::putPixel(int x, int y, short pixel) {
