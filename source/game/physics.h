@@ -28,6 +28,11 @@ class PhysicsObject {
         // Constructor.
         PhysicsObject();
 
+        // Add to the velocity of the object.
+        // x: The X velocity to add.
+        // y: The Y velocity to add.
+        void addVelocity(float x, float y);
+
         // Set the velocity of this physics object.
         // x: The X-component of the velocity.
         // y: The Y-component of the velocity.

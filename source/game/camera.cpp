@@ -42,12 +42,12 @@ void RaycastCamera::setAngle(float a) {
 void RaycastCamera::setForwardSpeed(float speed) {
     float velocityX = pPhysics->getForwardX() * speed;
     float velocityY = pPhysics->getForwardY() * speed;
-    pPhysics->setVelocity(velocityX, velocityY);
+    pPhysics->addVelocity(velocityX, velocityY);
 }
 void RaycastCamera::setStrafeSpeed(float speed) {
     float velocityX = this->pPhysics->getRightX() * speed;
     float velocityY =  this->pPhysics->getRightY() * speed;
-    pPhysics->setVelocity(velocityX, velocityY);
+    pPhysics->addVelocity(velocityX, velocityY);
 }
 void RaycastCamera::setTurnSpeed(float speed) {
     pPhysics->setRotationVelocity(speed);

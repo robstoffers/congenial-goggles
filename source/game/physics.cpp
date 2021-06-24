@@ -6,6 +6,10 @@
 
 PhysicsObject::PhysicsObject() { }
 
+void PhysicsObject::addVelocity(float x, float y) {
+    this->vX += x;
+    this->vY += y;
+}
 void PhysicsObject::setVelocity(float x, float y) {
     this->vX = x;
     this->vY = y;
