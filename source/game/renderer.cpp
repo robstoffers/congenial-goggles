@@ -3,12 +3,14 @@
 #include "map.h"
 #include "sprites.h"
 #include "door.h"
+#include "pool.h"
 
 #include "wall_stone.h"
 #include "wall_door.h"
 
 #include <math.h>
 #include <string.h>
+#include <stdio.h>
 
 #define BLACK 	0x8000
 #define WHITE 	0xFFFF
@@ -17,9 +19,16 @@
 #define BLUE	0xFC00
 #define FLOOR   0x9CE7
 
+#define COLOR_R(color) (color & 0x1F)
+#define COLOR_G(color) (color & 0x3E0) >> 5
+#define COLOR_B(color) (color & 0x7C00) >> 10
+#define COLOR(a, r, g, b) (a << 15) | (b << 10) | (g << 5) | r
+
 #define DRAW_DISTANCE 16.0f
 
 #define PI 3.14159f
+
+#define MAX_ENTITIES 10
 
 short colorLerp16(short from, short to, float amount) {
 	char aTo = (to & 0x8000) >> 15;
@@ -55,6 +64,22 @@ RaycastRenderer::RaycastRenderer(int width, int height) {
     // this->pSpriteManager = new RaycastSprites();
     this->wallSprite = RaycastSprites::getInstance()->addSprite(wall_stone, WALL_STONE_WIDTH, WALL_STONE_HEIGHT);
     this->doorSprite = RaycastSprites::getInstance()->addSprite(wall_door, WALL_DOOR_WIDTH, WALL_DOOR_HEIGHT);
+
+    this->_entities = new Pool<RaycastEntity>(MAX_ENTITIES);
+}
+
+RaycastEntity* RaycastRenderer::addEntity() {
+    if (_entities) {
+        RaycastEntity* pEntity = _entities->next();
+        if (pEntity) pEntity->reset();
+        return pEntity;
+    }
+    return NULL;
+}
+void RaycastRenderer::removeEntity(RaycastEntity* entity) {
+    if (_entities) {
+        _entities->release(entity);
+    }
 }
 
 void RaycastRenderer::cls() {
@@ -192,8 +217,90 @@ void RaycastRenderer::renderMap(RaycastCamera* camera, Map* map) {
     }
 }
 
-void RaycastRenderer::renderEntities() {
-    // // Render entities (enemies, debris, furniture, items on floor, etc.)
+void RaycastRenderer::renderEntities(RaycastCamera* camera) {
+    float cameraFOV = camera->getFOV();
+    float cameraHalfFOV = cameraFOV * 0.5f;
+
+    // Render entities (enemies, debris, furniture, items on floor, etc.)
+    if (_entities) {
+        for (int i = 0; i < _entities->size(); i++) {
+            if (_entities->isActive(i)) {
+                RaycastEntity* pEntity = _entities->item(i);
+
+                float toEntityX = pEntity->x - camera->getX();
+                float toEntityY = pEntity->y - camera->getY();
+                float distFromCamera = sqrtf(toEntityX * toEntityX + toEntityY * toEntityY);
+
+                float cameraDirX = camera->getFacingX();
+                float cameraDirY = camera->getFacingY();
+
+                float entityAngle = (atan2f(cameraDirY, cameraDirX) - atan2f(toEntityY, toEntityX)) * -1.0f;
+                if (entityAngle < -PI) {
+                    entityAngle += 2.0f * PI;
+                }
+                if (entityAngle > PI) {
+                    entityAngle -= 2.0f * PI;
+                }
+
+                bool inView = fabs(entityAngle) < cameraHalfFOV;
+
+                if (inView && distFromCamera >= 1.0f && distFromCamera < DRAW_DISTANCE) {
+                    float entityCeiling = (float)(this->gHeight / 2.0f) - this->gHeight / distFromCamera;
+                    float entityFloor = this->gHeight - entityCeiling;
+                    float entityHeight = (entityFloor - entityCeiling) * pEntity->scale;
+
+                    RaycastSprite* pSprite = RaycastSprites::getInstance()->getSprite(pEntity->spriteId);
+                    if (pSprite) {
+                        int spriteWidth = pSprite->getWidth();
+                        int spriteHeight = pSprite->getHeight();
+                        float aspectRatio = spriteHeight / spriteWidth;
+                        float entityWidth = entityHeight / aspectRatio;
+                        float entityMiddle = (0.5f * (entityAngle / cameraHalfFOV) + 0.5f) * (float)gWidth;
+
+                        for (int x = 0; x < entityWidth; x++) {
+                            for (int y = 0; y < entityHeight; y++) {
+                                float u = x / entityWidth;
+                                float v = y / entityHeight;
+                                int spriteX = (int)(entityMiddle + x - (entityWidth / 2.0f));
+
+                                if (spriteX >= 0 && spriteX < gWidth) {
+                                    short spritePixel = pSprite->sample(u, v);
+                                    // //The first bit in the pixel is for transparency. If it is 0 then we won't draw it.
+                                    if (spritePixel >> 15)
+                                        putPixel(spriteX, entityFloor - entityHeight + y, spritePixel);
+                                    //putPixel(spriteX, entityFloor - entityHeight + y, RED);
+                                }
+                            }
+                        }
+                    }
+                    
+
+                    //RaycastSprite* pSprite = this->pSpriteManager->getSprite(entities[i].spriteId);
+                    //int spriteWidth = pSprite->getWidth();
+                    //int spriteHeight = pSprite->getHeight();
+                    //float aspectRatio = spriteHeight / spriteWidth;
+                    //float entityWidth = entityHeight / fAspectRatio;
+                    //float entityMiddle = (0.5f * (entityAngle / cameraHalfFOV) + 0.5f) * (float)gWidth;
+
+                    //draw the sprite.
+                    //for (int x = 0; x < spriteWidth; x++) {
+                        //for (int y = 0; y < spriteHeight; y++) {
+                            //float u = x / spriteWidth;
+                            //float v = y / spriteHeight;
+                            //int spriteColumn = (int)(entityMiddle + x - (spriteWidth / 2.0f));
+                            //if (spriteColumn >= 0 && spriteColumn < gWidth) {
+                                //short spritePixel = pSprite->sample(u, v);
+                                // The first bit in the pixel is for transparency. If it is 0 then we won't draw it.
+                                //if (spritePixel >> 15)
+                                    //putPixel(spriteColumn, entityCeiling + y, spritePixel);
+                            //}
+                        //}
+                    //}
+                }
+            }
+        }
+    }
+
     // for (int i = 0; i < MAX_ENTITIES; i++) {
     //     float toEntityX = entities[i].x - camera->getX();
     //     float toEntityY = entities[i].y - camera->getY();
@@ -244,7 +351,7 @@ void RaycastRenderer::renderEntities() {
 void RaycastRenderer::render(RaycastCamera* camera, Map* map) {
     cls();
     this->renderMap(camera, map);
-    this->renderEntities();
+    this->renderEntities(camera);
 
     // RaycastSprite* skeleton = RaycastSprites::getInstance()->getSprite(2);
     // if (skeleton) {

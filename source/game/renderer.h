@@ -1,17 +1,24 @@
 #ifndef __RENDERER_H__
 #define __RENDERER_H__
 
-#define MAX_ENTITIES 10
-
 struct RaycastEntity {
     float x;
     float y;
+    float scale;
     int spriteId;     // the id of the sprite associated with this item.
+    void reset() {
+        scale = 1.0f;
+        x = 0.0f;
+        y = 0.0f;
+    }
 };
 
 class Map;
 class RaycastCamera;
 class RaycastSprites;
+
+template <typename T>
+class Pool;
 
 class RaycastRenderer {
     private:
@@ -26,15 +33,18 @@ class RaycastRenderer {
         int wallSprite;
         int doorSprite;
 
-        RaycastEntity entities[MAX_ENTITIES];
+        Pool<RaycastEntity>* _entities;
 
         void cls();
         void putPixel(int x, int y, short pixel);
         void renderMap(RaycastCamera* camera, Map* map);
-        void renderEntities();
+        void renderEntities(RaycastCamera* camera);
     public:
         RaycastRenderer(int width, int height);
         void render(RaycastCamera* camera, Map* map);
+
+        RaycastEntity* addEntity();
+        void removeEntity(RaycastEntity* entity);
 
         short* getBuffer();
         int getBufferSize();

@@ -48,8 +48,14 @@ void Game::init(int sw, int sh, PrintConsole* console) {
     RaycastSprites* sprites = RaycastSprites::getInstance();
     sprites->addSprite(skeleton, SKELETON_WIDTH, SKELETON_HEIGHT);
     RaycastSprite* sprite = sprites->getSprite(2);
-    sprite->addAnimation("walk", 0, 64, 32, 32, 10, true, 8);
+    sprite->addAnimation("walk", 0, 32, 32, 32, 10, true, 8);
     sprite->playAnimation(0);
+
+    RaycastEntity* pSkeleton = renderer->addEntity();
+    pSkeleton->x = 6.0f;
+    pSkeleton->y = 4.0f;
+    pSkeleton->spriteId = 2;
+    pSkeleton->scale = 0.7f;
 }
 
 bool Game::update(float dt) {

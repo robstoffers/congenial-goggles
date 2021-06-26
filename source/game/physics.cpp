@@ -54,7 +54,7 @@ RaycastPhysicsManager::~RaycastPhysicsManager() {
 
 PhysicsObject* RaycastPhysicsManager::getPhysics() {
     PhysicsObject* item = _pool->next();
-    item->reset(0, 0, 0);
+    if (item) item->reset(0, 0, 0);
     return item;
 }
 
